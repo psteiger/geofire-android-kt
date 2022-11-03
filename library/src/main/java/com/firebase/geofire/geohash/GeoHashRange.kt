@@ -111,13 +111,13 @@ private fun GeoHash.queries(bits: Int): ClosedRange<GeoHash> {
     val hash = value.substring(0, precision)
     val base = hash.substring(0, hash.length - 1)
     val lastValue = hash[hash.length - 1].toBase32Value()
-    val significantBits = bits - base.length * BITS_PER_BASE32_CHAR
+    val significantBits = bits - (base.length * BITS_PER_BASE32_CHAR)
     val unusedBits = BITS_PER_BASE32_CHAR - significantBits
     // delete unused bits
-    val start = lastValue shr unusedBits shl unusedBits
-    val endInclusive = start + (1 shl unusedBits)
+    val start = (lastValue shr unusedBits) shl unusedBits
+    val end = start + (1 shl unusedBits)
     val startHash = base + start.toBase32Char()
-    val endHash = base + (endInclusive.takeIf { it <= 31 }?.toBase32Char() ?: '~')
+    val endHash = base + (end.takeIf { it <= 31 }?.toBase32Char() ?: '~')
     return GeoHash(startHash)..GeoHash(endHash)
 }
 

@@ -120,4 +120,4 @@ private fun GeoHashBuilder.hash(acc: Int, i: Int, j: Int): Int {
 
 private fun String.asGeoHash() = GeoHash(this)
 
-private fun String.isValidBase32(): Boolean = matches("^[$BASE32_CHARS]*$".toRegex())
+private fun String.isValidBase32(): Boolean = matches("^[$BASE32_CHARS]*[~]?$".toRegex())
