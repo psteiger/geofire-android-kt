@@ -23,12 +23,9 @@ import com.firebase.geofire.geometry.inKilometers
 import com.firebase.geofire.geometry.kilometers
 import com.freelapp.firebase.database.rtdb.*
 import com.google.firebase.database.*
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /**
  * A GeoQuery object can be used for geo queries in a given circle.
@@ -59,7 +56,8 @@ val GeoQuery.events: Flow<GeoQueryEvent>
 internal fun GeoQuery(geoFire: GeoFire, circle: Circle): GeoQuery = GeoQueryImpl(geoFire, circle)
 
 private fun Circle.capRadius() = Circle(center, radius.cap())
-private fun Distance.cap() = inKilometers().value.coerceAtMost(MAX_SUPPORTED_RADIUS_IN_KM).kilometers
+private fun Distance.cap() =
+    inKilometers().value.coerceAtMost(MAX_SUPPORTED_RADIUS_IN_KM).kilometers
 
 private fun DatabaseReference.query(range: ClosedRange<GeoHash>): Flow<GeoQueryDataEvent> =
     orderByChild("g")
@@ -84,11 +82,13 @@ private class MultiQuery {
     private val snaps = hashMapOf<String, DataSnapshot>()
     private val jobs = hashMapOf<ClosedRange<GeoHash>, Job>()
 
-    // Mutex is needed because we launch concurrent coroutines to handle each query from the range
-    private val mutex = Mutex()
+    // needed because we launch concurrent coroutines to handle each query from the range
+    @OptIn(ExperimentalStdlibApi::class, ExperimentalCoroutinesApi::class)
+    private val noParallelismContext =
+        (coroutineContext[CoroutineDispatcher] ?: Dispatchers.IO).limitedParallelism(1)
 
     suspend fun setQueries(queries: Set<ClosedRange<GeoHash>>) {
-        mutex.withLock {
+        withContext(noParallelismContext) {
             removeOldQueries(queries)
             launchNewQueries(queries)
         }
@@ -123,7 +123,7 @@ private class MultiQuery {
     }
 
     private suspend fun onGeoQueryEvent(geoQueryDataEvent: GeoQueryDataEvent) {
-        mutex.withLock {
+        withContext(noParallelismContext) {
             val snap = geoQueryDataEvent.snapshot
             val key = snap.key!!
             val location = snap.geoLocation
@@ -133,7 +133,7 @@ private class MultiQuery {
                         val oldLocation = snaps.getValue(key).geoLocation
                         if (oldLocation != location) {
                             send(DataMoved(snap))
-                        } // else ignore
+                        } // else ignore, data entered and did not change
                     } else {
                         send(DataEntered(snap))
                     }
