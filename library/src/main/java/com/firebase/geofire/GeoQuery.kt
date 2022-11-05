@@ -78,17 +78,16 @@ private fun Flow<ChildEvent>.toGeoQueryEventFlow(): Flow<GeoQueryDataEvent> =
     }
 
 context(GeoQuery, ProducerScope<GeoQueryDataEvent>)
-private class MultiQuery {
+private class MultiQuery(dispatcher: CoroutineDispatcher = Dispatchers.IO) {
     private val snaps = hashMapOf<String, DataSnapshot>()
     private val jobs = hashMapOf<ClosedRange<GeoHash>, Job>()
 
     // needed because we launch concurrent coroutines to handle each query from the range
-    @OptIn(ExperimentalStdlibApi::class, ExperimentalCoroutinesApi::class)
-    private val noParallelismContext =
-        (coroutineContext[CoroutineDispatcher] ?: Dispatchers.IO).limitedParallelism(1)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val ctx = dispatcher.limitedParallelism(1) + NonCancellable
 
     suspend fun setQueries(queries: Set<ClosedRange<GeoHash>>) {
-        withContext(noParallelismContext) {
+        withContext(ctx) {
             removeOldQueries(queries)
             launchNewQueries(queries)
         }
@@ -123,7 +122,7 @@ private class MultiQuery {
     }
 
     private suspend fun onGeoQueryEvent(geoQueryDataEvent: GeoQueryDataEvent) {
-        withContext(noParallelismContext) {
+        withContext(ctx) {
             val snap = geoQueryDataEvent.snapshot
             val key = snap.key!!
             val location = snap.geoLocation
