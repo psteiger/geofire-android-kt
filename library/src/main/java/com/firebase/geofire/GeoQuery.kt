@@ -42,29 +42,19 @@ public var GeoQuery.radius: Distance
 public val GeoQuery.state: Flow<Map<String, GeoLocation>>
     get() = stateImpl
 
-//public val GeoQuery.events: Flow<GeoQueryEvent> get() = dataEventsImpl.map(GeoQueryDataEvent::toGeoQueryEvent)
-
-//public sealed interface GeoQueryEvent {
-//    public val key: String
-//}
-//
-//public data class KeyEntered(override val key: String, val location: GeoLocation) : GeoQueryEvent
-//public data class KeyExited(override val key: String) : GeoQueryEvent
-//public data class KeyMoved(override val key: String, val location: GeoLocation) : GeoQueryEvent
-
 /*
  * Implementation
  */
 
 private val GeoQuery.stateImpl: Flow<Map<String, GeoLocation>>
     get() = flow {
-        val multiQuery = DynamicMultiQuery()
         coroutineScope {
+            val multiQuery = DynamicMultiQuery()
             circle
                 .map { it.queries.map(geoFire.databaseReference::query).toSet() }
                 .onEach { multiQuery.queries.value = it }
                 .launchIn(this)
-            emitAll(multiQuery.state.map { it.mapValues { it.value.geoLocation } })
+            emitAll(multiQuery.state.map { state -> state.mapValues { it.value.geoLocation } })
         }
     }
         .combine(circle) { state, circle -> state.filterValues { it in circle } }
@@ -80,18 +70,6 @@ private fun DatabaseReference.query(range: ClosedRange<GeoHash>): Query =
     orderByChild("g")
         .startAt(range.start.value)
         .endAt(range.endInclusive.value)
-
-//internal sealed class GeoQueryDataEvent(open val snapshot: DataSnapshot)
-//internal data class DataEntered(override val snapshot: DataSnapshot) : GeoQueryDataEvent(snapshot)
-//internal data class DataExited(override val snapshot: DataSnapshot) : GeoQueryDataEvent(snapshot)
-//internal data class DataMoved(override val snapshot: DataSnapshot) : GeoQueryDataEvent(snapshot)
-//
-//private fun GeoQueryDataEvent.toGeoQueryEvent(): GeoQueryEvent =
-//    when (this) {
-//        is DataEntered -> KeyEntered(snapshot.key!!, snapshot.geoLocation)
-//        is DataExited -> KeyExited(snapshot.key!!)
-//        is DataMoved -> KeyMoved(snapshot.key!!, snapshot.geoLocation)
-//    }
 
 private class GeoQueryImpl(override val geoFire: GeoFire, initialParameters: Circle) : GeoQuery {
     override val circle = MutableStateFlow(initialParameters.capRadius())
