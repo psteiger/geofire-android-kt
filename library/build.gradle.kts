@@ -3,6 +3,7 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 plugins {
     id("com.android.library")
     kotlin("android")
+    `maven-publish`
 }
 
 android {
@@ -55,4 +56,16 @@ dependencies {
     testImplementation("androidx.annotation:annotation:1.5.0")
     testImplementation("androidx.test.ext:junit:1.1.4")
     testImplementation("androidx.test.espresso:espresso-core:3.5.0")
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            // Creates a Maven publication called "release".
+            register("release", MavenPublication::class) {
+                from(components["release"])
+                artifactId = project.name
+            }
+        }
+    }
 }
