@@ -15,87 +15,70 @@
  */
 package com.firebase.geofire
 
-import com.firebase.geofire.geohash.geoHash
-import com.firebase.geofire.geometry.*
+import com.firebase.geofire.internal.geohash.geoHash
+import com.freelapp.firebase.database.rtdb.value
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.GenericTypeIndicator
 import kotlinx.coroutines.tasks.await
+import java.lang.IllegalStateException
 
-/** A GeoFire instance is used to store geo location data in Firebase. */
-interface GeoFire {
-    /** The Firebase reference this GeoFire instance uses. */
-    val databaseReference: DatabaseReference
+/** A GeoFire instance is used to store [GeoLocation] data in Firebase. */
+public interface GeoFire {
+    /** The Firebase reference this [GeoFire] instance uses. */
+    public val databaseReference: DatabaseReference
 }
 
-fun DatabaseReference.asGeoFire(): GeoFire = GeoFire(this)
+/** Creates a new [GeoFire] instance. */
+public fun DatabaseReference.asGeoFire(): GeoFire = GeoFireImpl(this)
 
-fun GeoFire(databaseReference: DatabaseReference): GeoFire = GeoFireImpl(databaseReference)
+/** Creates a new [GeoFire] instance. */
+public fun GeoFire(databaseReference: DatabaseReference): GeoFire = GeoFireImpl(databaseReference)
 
-/**
- * Gets the current location for a key and calls the callback with the current value.
- *
- * @param key      The key whose location to get
- */
-suspend fun GeoFire.getLocation(key: String): GeoLocation {
-    val keyRef = databaseReference.child(key)
-    val snapshot = keyRef.get().await()
-    return snapshot.geoLocation
-}
+/** Gets the current location for a [key]. */
+public suspend fun GeoFire.getLocation(key: String): GeoLocation = key.ref.get().await().geoLocation
 
-/**
- * Sets the location for a given key.
- *
- * @param key                The key to save the location for
- * @param location           The location of this key
- */
-suspend fun GeoFire.setLocation(key: String, location: GeoLocation) {
-    val keyRef = databaseReference.child(key)
+/** Sets the [location] for a given [key]. */
+public suspend fun GeoFire.setLocation(key: String, location: GeoLocation) {
     val geoHash = location.geoHash().value
+    val (lat, lng) = location
     val updates = mapOf(
         "g" to geoHash,
-        "l" to listOf(location.latitude.value, location.longitude.value)
+        "l" to listOf(lat.value, lng.value)
     )
-    keyRef.setValue(updates, geoHash).await()
+    key.ref.setValue(updates, geoHash).await()
+}
+
+/** Removes the location for a [key] from this GeoFire. */
+public suspend fun GeoFire.removeLocation(key: String) {
+    key.ref.removeValue().await()
 }
 
 /**
- * Removes the location for a key from this GeoFire.
- *
- * @param key The key to remove from this GeoFire
+ * Returns a new Query object covering the giving [circle].
+ * The maximum radius that is supported is about 8587km. If a radius bigger than this is passed we'll cap it.
  */
-suspend fun GeoFire.removeLocation(key: String) {
-    val keyRef = databaseReference.child(key)
-    keyRef.removeValue().await()
-}
-
-
-fun GeoFire.queryAtLocation(circle: Circle): GeoQuery = GeoQuery(this, circle)
+public fun GeoFire.queryAtLocation(circle: Circle): GeoQuery = GeoQuery(this, circle)
 
 /**
- * Returns a new Query object centered at the given location and with the given radius.
- *
- * @param center The center of the query
- * @param radius The radius of the query, in kilometers. The maximum radius that is
- * supported is about 8587km. If a radius bigger than this is passed we'll cap it.
- * @return The new GeoQuery object
+ * Returns a new Query object centered at the given [center] and [radius], in kilometers.
+ * The maximum radius that is supported is about 8587km. If a radius bigger than this is passed we'll cap it.
  */
-fun GeoFire.queryAtLocation(center: GeoLocation, radius: Distance): GeoQuery =
+public fun GeoFire.queryAtLocation(center: GeoLocation, radius: Distance): GeoQuery =
     queryAtLocation(Circle(center, radius))
 
 internal val DataSnapshot.geoLocation: GeoLocation
-    get() = runCatching {
-        val typeIndicator = object : GenericTypeIndicator<Map<String, Any>>() {}
-        val data = getValue(typeIndicator)!!
+    get() = try {
+        val data = value<Map<String, *>>()!!
         val location = data["l"] as List<*>
-        val latitudeObj = location[0] as Number
-        val longitudeObj = location[1] as Number
-        val latitude = latitudeObj.toDouble().latitude
-        val longitude = longitudeObj.toDouble().longitude
+        val latitude = (location[0] as Number).toDouble().latitude
+        val longitude = (location[1] as Number).toDouble().longitude
         GeoLocation(latitude, longitude)
-    }.getOrElse {
-        error("GeoFire data has invalid format: $this")
+    } catch (e: Throwable) {
+        throw IllegalStateException("GeoFire data has invalid format: $this", e)
     }
+
+context(GeoFire)
+private val String.ref: DatabaseReference get() = databaseReference.child(this)
 
 @JvmInline
 private value class GeoFireImpl(override val databaseReference: DatabaseReference) : GeoFire

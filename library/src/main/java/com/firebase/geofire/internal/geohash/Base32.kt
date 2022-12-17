@@ -13,16 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.firebase.geofire.geohash
+package com.firebase.geofire.internal.geohash
 
 /* number of bits per base 32 character */
 internal const val BITS_PER_BASE32_CHAR = 5
 internal const val BASE32_CHARS = "0123456789bcdefghjkmnpqrstuvwxyz"
 
 internal fun Int.toBase32Char(): Char =
-    BASE32_CHARS.getOrNull(this)
-        ?: error("Not a valid base32 value: $this")
+    BASE32_CHARS.getOrNull(this) ?: error("Not a valid base32 value: $this")
 
 internal fun Char.toBase32Value(): Int =
-    BASE32_CHARS.indexOf(this).takeIf { it != -1 }
-        ?: error("Not a valid base32 char: $this")
+    BASE32_CHARS.indexOf(this).takeIf { it != -1 } ?: error("Not a valid base32 char: $this")

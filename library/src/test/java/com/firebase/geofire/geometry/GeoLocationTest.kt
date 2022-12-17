@@ -1,5 +1,7 @@
 package com.firebase.geofire.geometry
 
+import com.firebase.geofire.distanceTo
+import com.firebase.geofire.plus
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import kotlin.math.floor

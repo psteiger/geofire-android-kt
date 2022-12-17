@@ -20,7 +20,6 @@ import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.lifecycleScope
 import com.firebase.geofire.*
-import com.firebase.geofire.geometry.*
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.Dispatchers
@@ -40,11 +39,12 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val geoFire = Firebase.database.getReference("geofire").asGeoFire()
             val location = 15.0.latitude + 15.0.longitude
+            val queryLocation = 15.0.latitude + 17.0.longitude
             geoFire.setLocation("abc", location)
             geoFire.setLocation("def", location)
-            val geoQuery = geoFire.queryAtLocation(location, 10.0.kilometers)
+            val geoQuery = geoFire.queryAtLocation(queryLocation, 0.kilometers)
             launch {
-                geoQuery.events
+                geoQuery.state
                     .onEach { Log.d(TAG, "onCreate: $it") }
                     .flowOn(Dispatchers.IO)
                     .launchIn(this)
@@ -55,7 +55,8 @@ class MainActivity : AppCompatActivity() {
             }
             launch {
                 delay(4.seconds)
-                geoQuery.radius = 1000000.0.meters
+                Log.d(TAG, "Setting radius to max: ")
+                geoQuery.radius = 100000.0.kilometers
             }
         }
     }

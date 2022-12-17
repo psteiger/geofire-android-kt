@@ -2,7 +2,10 @@ package com.firebase.geofire.geohash
 
 import com.firebase.geofire.geometry.latitude
 import com.firebase.geofire.geometry.longitude
-import com.firebase.geofire.geometry.plus
+import com.firebase.geofire.plus
+import com.firebase.geofire.internal.geohash.GeoHash
+import com.firebase.geofire.internal.geohash.geoHash
+import com.firebase.geofire.internal.geohash.toGeoLocation
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 

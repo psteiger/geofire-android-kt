@@ -13,25 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.firebase.geofire.geohash
+package com.firebase.geofire.internal.geohash
 
 import com.firebase.geofire.*
-import com.firebase.geofire.geometry.*
+import com.firebase.geofire.internal.EARTH_MERIDIONAL_CIRCUMFERENCE
+import com.firebase.geofire.internal.METERS_PER_DEGREE_LATITUDE
 import kotlin.math.*
 
 // The maximal number of bits precision for a geohash
 private const val MAX_PRECISION_BITS = MAX_PRECISION * BITS_PER_BASE32_CHAR
 
-val Circle.queries: Set<ClosedRange<GeoHash>>
+internal val Circle.queries: Set<ClosedRange<GeoHash>>
     get() {
         val queryBits = bitsForBoundingBox.coerceAtLeast(1)
         val (latitude, longitude) = center
+        val radiusInMeters = radius.inMeters()
         val precision = GeoHashPrecision(ceil(queryBits.toFloat() / BITS_PER_BASE32_CHAR).toInt())
-        val latitudeDegrees = radius.value / METERS_PER_DEGREE_LATITUDE
+        val latitudeDegrees = radiusInMeters.value / METERS_PER_DEGREE_LATITUDE
         val latitudeNorth = (latitude + latitudeDegrees)
         val latitudeSouth = (latitude - latitudeDegrees)
-        val longitudeDeltaNorth = radius.toLongitudeDegrees(latitudeNorth)
-        val longitudeDeltaSouth = radius.toLongitudeDegrees(latitudeSouth)
+        val longitudeDeltaNorth = radiusInMeters.toLongitudeDegrees(latitudeNorth)
+        val longitudeDeltaSouth = radiusInMeters.toLongitudeDegrees(latitudeSouth)
         val longitudeDelta = max(longitudeDeltaNorth, longitudeDeltaSouth)
         val geoHash = GeoHash(latitude, longitude, precision)
         val geoHashW = GeoHash(latitude, longitude - longitudeDelta, precision)
@@ -42,7 +44,7 @@ val Circle.queries: Set<ClosedRange<GeoHash>>
         val geoHashS = GeoHash(latitudeSouth, longitude, precision)
         val geoHashSW = GeoHash(latitudeSouth, longitude - longitudeDelta, precision)
         val geoHashSE = GeoHash(latitudeSouth, longitude + longitudeDelta, precision)
-        return buildSet {
+        val result = buildSet {
             add(geoHash.queries(queryBits))
             add(geoHashE.queries(queryBits))
             add(geoHashW.queries(queryBits))
@@ -54,6 +56,7 @@ val Circle.queries: Set<ClosedRange<GeoHash>>
             add(geoHashSW.queries(queryBits))
             merge()
         }
+        return result
     }
 
 private val Circle.bitsForBoundingBox: Int
@@ -84,13 +87,13 @@ private infix fun ClosedRange<GeoHash>.isSuperQueryOf(other: ClosedRange<GeoHash
     start <= other.start &&
             endInclusive >= other.endInclusive
 
-private operator fun ClosedRange<GeoHash>.plus(other: ClosedRange<GeoHash>): ClosedRange<GeoHash> =
+private infix fun ClosedRange<GeoHash>.mergeWith(other: ClosedRange<GeoHash>): ClosedRange<GeoHash> =
     when {
         this isPrefixOf other -> start..other.endInclusive
         other isPrefixOf this -> other.start..endInclusive
         this isSuperQueryOf other -> this
         other isSuperQueryOf this -> other
-        else -> throw IllegalArgumentException("Can't join these 2 ranges: $this, $other")
+        else -> error("Can't join these 2 ranges: $this, $other")
     }
 
 private fun bitsLatitude(resolution: Distance): Double =
@@ -126,7 +129,7 @@ private fun MutableCollection<ClosedRange<GeoHash>>.merge() {
         val (query1, query2) = firstMergeableOrNull() ?: break
         remove(query1)
         remove(query2)
-        add(query1 + query2)
+        add(query1 mergeWith query2)
     }
 }
 

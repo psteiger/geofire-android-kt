@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.firebase.geofire.geohash
+package com.firebase.geofire.internal.geohash
 
-import com.firebase.geofire.geometry.*
+import com.firebase.geofire.*
 
-// The default precision of a geohash
+// The default precision of a geo hash
 private const val DEFAULT_PRECISION = 10
-// The maximal precision of a geohash
+// The maximal precision of a geo hash
 internal const val MAX_PRECISION = 22
 
 @JvmInline
-value class GeoHash(val value: String) : Comparable<GeoHash> {
+internal value class GeoHash(val value: String) : Comparable<GeoHash> {
     override fun compareTo(other: GeoHash): Int = value compareTo other.value
 
     init {
@@ -34,7 +34,7 @@ value class GeoHash(val value: String) : Comparable<GeoHash> {
 }
 
 @JvmInline
-value class GeoHashPrecision(val value: Int) {
+internal value class GeoHashPrecision(val value: Int) {
     init {
         require(value in 1..MAX_PRECISION) {
             "Precision of a GeoHash must be a value between 1 and $MAX_PRECISION."
@@ -45,10 +45,10 @@ value class GeoHashPrecision(val value: Int) {
 /**
  * Converts a lat/lng location into a GeoHash with specified precision.
  */
-fun GeoLocation.geoHash(precision: GeoHashPrecision = GeoHashPrecision(10)): GeoHash =
+internal fun GeoLocation.geoHash(precision: GeoHashPrecision = GeoHashPrecision(10)): GeoHash =
     GeoHash(latitude, longitude, precision)
 
-fun GeoHash.toGeoLocation(): GeoLocation {
+internal fun GeoHash.toGeoLocation(): GeoLocation {
     val decoded = value
         .map { it.toBase32Value() }
         .fold(0L) { acc, base32char -> (acc shl BITS_PER_BASE32_CHAR) + base32char }
@@ -80,7 +80,7 @@ fun GeoHash.toGeoLocation(): GeoLocation {
     return lat.latitude + lng.longitude
 }
 
-fun GeoHash(
+internal fun GeoHash(
     latitude: Latitude,
     longitude: Longitude,
     precision: GeoHashPrecision = GeoHashPrecision(DEFAULT_PRECISION)
@@ -120,4 +120,4 @@ private fun GeoHashBuilder.hash(acc: Int, i: Int, j: Int): Int {
 
 private fun String.asGeoHash() = GeoHash(this)
 
-private fun String.isValidBase32(): Boolean = matches("^[$BASE32_CHARS]*[~]?$".toRegex())
+private fun String.isValidBase32(): Boolean = matches("^[$BASE32_CHARS]*~?$".toRegex())
