@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.firebase.geofire.example
+package com.firebase.geofire.sample
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle

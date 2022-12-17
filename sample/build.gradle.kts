@@ -5,6 +5,7 @@ plugins {
 }
 
 android {
+    namespace = "com.firebase.geofire.sample"
     compileSdk = 33
     defaultConfig {
         applicationId = "com.example.myapplication"

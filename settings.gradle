@@ -16,4 +16,7 @@ dependencyResolutionManagement {
     }
 }
 
-include ':app', ':library'
+if (!System.env.JITPACK)
+    include ':sample'
+
+include ':library'
