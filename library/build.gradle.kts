@@ -45,8 +45,7 @@ tasks.withType(Test::class).configureEach {
 }
 
 dependencies {
-    api("com.google.firebase:firebase-database:20.1.0")
-    implementation("com.github.psteiger:firebase-database-ktx:0.2.9")
+    api("com.google.firebase:firebase-database-ktx:20.1.0")
     implementation("androidx.core:core-ktx:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.6.4")

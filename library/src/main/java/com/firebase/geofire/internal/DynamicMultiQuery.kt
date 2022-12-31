@@ -1,7 +1,7 @@
 package com.firebase.geofire.internal
 
 import com.firebase.geofire.*
-import com.freelapp.firebase.database.rtdb.*
+import com.google.firebase.database.ktx.*
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.Query
 import kotlinx.coroutines.*
@@ -24,19 +24,17 @@ internal val DynamicMultiQuery.state: Flow<Map<String, DataSnapshot>>
                     val old = jobs.keys
                     (old - newQueries).forEach { jobs.remove(it)!!.cancelAndJoin() }
                     val newJobs = (newQueries - old).associateWith { query ->
-                        query.children.onEach { send(it) }.launchIn(this)
+                        query.childEvents.buffer(Channel.UNLIMITED).onEach { send(it) }.launchIn(this)
                     }
                     jobs.putAll(newJobs)
                 }
             }
             for (e in ch) {
-                val snapshot = e.snapshot
-                val key = snapshot.key!!
                 when (e) {
-                    is ChildAdded -> snapshots[key] = snapshot
-                    is ChildChanged -> snapshots[key] = snapshot
-                    is ChildMoved -> { /* handled by ChildChanged */ }
-                    is ChildRemoved -> snapshots.remove(key)
+                    is ChildEvent.Added -> snapshots[e.snapshot.key!!] = e.snapshot
+                    is ChildEvent.Changed -> snapshots[e.snapshot.key!!] = e.snapshot
+                    is ChildEvent.Moved -> { /* handled by ChildChanged */ }
+                    is ChildEvent.Removed -> snapshots.remove(e.snapshot.key!!)
                 }
                 emit(snapshots.toMap())
             }

@@ -16,9 +16,9 @@
 package com.firebase.geofire
 
 import com.firebase.geofire.internal.geohash.geoHash
-import com.freelapp.firebase.database.rtdb.value
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.ktx.getValue
 import kotlinx.coroutines.tasks.await
 import java.lang.IllegalStateException
 
@@ -68,7 +68,7 @@ public fun GeoFire.queryAtLocation(center: GeoLocation, radius: Distance): GeoQu
 
 internal val DataSnapshot.geoLocation: GeoLocation
     get() = try {
-        val data = value<Map<String, *>>()!!
+        val data = getValue<Map<String, *>>()!!
         val location = data["l"] as List<*>
         val latitude = (location[0] as Number).toDouble().latitude
         val longitude = (location[1] as Number).toDouble().longitude
